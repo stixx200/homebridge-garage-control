@@ -1,0 +1,28 @@
+{
+  "name": "homebridge-garage-control",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "raspberrypi",
+    "raspberry-pi"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "^4.17.11",
+    "onoff": "^3.2.2",
+    "rxjs": "^6.3.3"
+  },
+  "devDependencies": {
+    "jest": "^23.6.0"
+  },
+  "engines": {
+    "node": ">=8.11.1",
+    "homebridge": ">=0.4.1"
+  }
+}
