@@ -3,20 +3,33 @@
 const _ = require("lodash");
 const { Keypad } = require('./keypad');
 const { CombinationLock } = require('./combination-lock');
-const { DoorControl, LEFT_DOOR, RIGHT_DOOR } = require("./door-control");
+const { DoorControl } = require("./door-control");
 const { LedOutput } = require("./led-output");
 const { Buzzer } = require("./buzzer");
+
+const wait = promisify(setTimeout);
 
 class GarageControl {
     constructor(config = {}) {
         this.log = config.log || console.log;
-        if (!Array.isArray(config.leftDoorCode) || !Array.isArray(config.leftDoorCode)) {
-            throw new Error(`Configuration doesn't provide left and/or right door code (left: '${config.leftDoorCode}' right: '${config.rightDoorCode}').`);
+        if (!Array.isArray(config.doors) || !Array.isArray(config.leftDoorCode)) {
+            throw new Error('Can\'t create GarageControl without door configuration');
         }
-        this.leftDoorCode = config.leftDoorCode;
-        this.log(`Left door code: ${this.leftDoorCode}`);
-        this.rightDoorCode = config.rightDoorCode;
-        this.log(`Right door code: ${this.rightDoorCode}`);
+
+        this.doors = _.map(config.doors, (config, index) => {
+            if (!Array.isArray(config.code)) {
+                throw new Error(`Configuration doesn't provide door code for door '${config.id}' (index ${index}).`);
+            }
+            this.log(`Door code for ${config.id}: ${config.code}`);
+            const control = new DoorControl(config.id, this.log, config);
+            control.on("update", isClosed => this.emit("doorStateChanged", control.id, isClosed));
+            return {
+                id: config.id,
+                code: config.code,
+                control,
+                led: new LedOutput(config.id, this.log, config.ledGpio),
+            }
+        });
         this.toggleSoundCode = ["*", "*", "*"];
         this.imperialMarchCode = ["1", "1", "3", "8"]; // Star Wars Episode IV: A New Hope (1977): 1138 is the number of the cell block on the Death Star that Luke Skywalker claims to be transferring Chewbacca from.
 
@@ -30,10 +43,10 @@ class GarageControl {
             config.colGpio,
             this.log);
 
-        this.lock = new CombinationLock(this.keypad, [this.leftDoorCode, this.rightDoorCode, this.imperialMarchCode, this.toggleSoundCode]);
+        const codes = _.concat([this.imperialMarchCode, this.toggleSoundCode], _.map(this.doors, "code"));
+        this.lock = new CombinationLock(this.keypad, codes);
 
-        this.doorControl = new DoorControl(this.log, config.doorGpio);
-        this.ledOutput = new LedOutput(this.log, config.ledGpio);
+        this.failedLedOutput = new LedOutput(this.log, config.failedLedGpio);
         this.buzzer = new Buzzer(this.log, config.buzzerGpio);
     }
 
@@ -46,17 +59,19 @@ class GarageControl {
             this.log(`input: ${JSON.stringify(keys)}`);
         });
 
-        this.lock.on('failed', () => {
+        this.lock.on('failed', async () => {
             this.log("Failed to unlock");
-            this.ledOutput.activateFailedLED();
+            for (let i = 0; i < 4; ++i) {
+                await this.failedLedOutput.activate(125);
+                await wait(125);
+            }
             this.buzzer.playFailure();
         });
 
         this.lock.on('unlocked', (code) => {
-            if (_.isEqual(this.leftDoorCode, code)) {
-                this.openLeftDoor();
-            } else if (_.isEqual(this.rightDoorCode, code)) {
-                this.openRightDoor();
+            const door = _.find(this.doors, (d) => _.isEqual(d.code, code));
+            if (door) {
+                this.openCloseDoor(door);
             } else if (_.isEqual(this.imperialMarchCode, code)) {
                 this.buzzer.playImperialMarch();
             } else if (_.isEqual(this.toggleSoundCode, code)) {
@@ -73,15 +88,21 @@ class GarageControl {
         this.keypad.stop();
     }
 
-    openCloseDoor(door, callback) {
-        this.log(`unlocked ${door} door`);
-        if (door === LEFT_DOOR) {
-            this.ledOutput.activateLeftLED();
-        } else {
-            this.ledOutput.activateRightLED();
+    async openCloseDoor(door) {
+        this.log(`unlocked ${door.id} door`);
+        await Promise.all([
+            door.led.activate(),
+            door.control.openCloseDoor(),
+            this.buzzer.playSuccess(),
+        ]);
+    }
+
+    async openCloseDoorById(doorId) {
+        const door = _.find(this.doors, ["id", doorId]);
+        if (!door) {
+            throw new Error(`Can't open/close unknown door: ${doorId}`);
         }
-        this.buzzer.playSuccess();
-        this.doorControl.openCloseDoor(door, callback);
+        await this.openCloseDoor(door);
     }
 }
 

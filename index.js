@@ -1,6 +1,5 @@
 "use strict";
 
-const { LEFT_DOOR, RIGHT_DOOR } = require("./src/door-control");
 const initHomebridgeGarageDoorOpener = require("./src/homebridge/homebridgeGarageDoorOpener");
 
 module.exports = function (homebridge) {
@@ -23,9 +22,10 @@ module.exports = function (homebridge) {
             this.garageControl = new GarageControl({ ...config, log: this.log });
             this.garageControl.start();
 
-            // door services
-            this.leftDoorService = new HomebridgeGarageDoorOpener(LEFT_DOOR, this.garageControl, this.getDoorName(door), this.log, config);
-            this.rightDoorService = new HomebridgeGarageDoorOpener(RIGHT_DOOR, this.garageControl, this.getDoorName(door), this.log, config);
+            this.doorServices = _.map(this.garageControl.doors, (door) => {
+                const doorName = door.name || door.id;
+                return new HomebridgeGarageDoorOpener(door.id, this.garageControl, doorName, this.log, config);
+            });
 
             // information service
             this.getService(Service.AccessoryInformation)
@@ -37,16 +37,7 @@ module.exports = function (homebridge) {
         }
 
         getServices() {
-            return [...this.services, this.leftDoorService, this.rightDoorService];
-        }
-
-        getDoorName(door) {
-            if (door === LEFT_DOOR) {
-                return "linkes Garagentor";
-            } else if (door === RIGHT_DOOR) {
-                return "rechtes Garagentor";
-            }
-            return "unknown";
+            return [...this.services, ...this.doorServices];
         }
     }
 

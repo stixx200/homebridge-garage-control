@@ -22,20 +22,20 @@ function init(homebridge) {
     }
 
     class HomebridgeGarageDoorOpener extends GarageDoorOpener {
-        constructor(door, garageControl, serviceName, log, config) {
-            super(serviceName, `${door}_garage_door`);
-            this.door = door;
+        constructor(doorId, garageControl, serviceName, log, config) {
+            super(serviceName, `${doorId}_garage_door`);
+            this.doorId = doorId;
             this.garageControl = garageControl;
             this.log = log;
             this.config = config;
             this.isOperating = false;
 
-            const state = this.readCurrentDoorState(door);
+            const state = this.readCurrentDoorState();
             this.onSetTargetDoorState = this.onSetTargetDoorState.bind(this);
             this.operationFinished = this.operationFinished.bind(this);
             this.onDoorStateChanged = this.onDoorStateChanged.bind(this);
 
-            this.garageControl.doorControl.on("update", this.onDoorStateChanged);
+            this.garageControl.on("doorStateChanged", this.onDoorStateChanged);
 
             // TargetDoorState
             this.setCharacteristic(TargetDoorState, state);
@@ -68,7 +68,11 @@ function init(homebridge) {
 			this.isOperating = true;
             this.log.debug("Started operation");
             this.setCharacteristic(CurrentDoorState, asOperationState(state));
-            this.garageControl.openCloseDoor(this.door, this.operationFinished);
+            this.garageControl.openCloseDoorById(this.doorId)
+                .then(() => {
+                    this.operationFinished();
+                    callback();
+                });
         }
 
         operationFinished() {
@@ -77,8 +81,8 @@ function init(homebridge) {
             this.refresh();
         }
 
-        onDoorStateChanged(door, isClosed) {
-            if (door !== this.door) {
+        onDoorStateChanged(doorId, isClosed) {
+            if (doorId !== this.doorId) {
                 return;
             }
             this.getCharacteristic(CurrentDoorState)
@@ -91,12 +95,12 @@ function init(homebridge) {
             }
             const currentState = this.getCharacteristic(CurrentDoorState).value;
             const targetState = (currentState == CurrentDoorState.OPEN) ? TargetDoorState.OPEN : TargetDoorState.CLOSED
-            this.log(`Refresh targetDoorState for door ${this.door} to '${targetState}'`);
+            this.log(`Refresh targetDoorState for door ${this.doorId} to '${targetState}'`);
             this.service.getCharacteristic(TargetDoorState).setValue(targetState);
         }
 
         readCurrentDoorState() {
-            return this.garageControl.doorControl.isDoorClosed(this.door) ? CurrentDoorState.CLOSED : CurrentDoorState.OPENED;
+            return this.garageControl.doorControl.isDoorClosed(this.doorId) ? CurrentDoorState.CLOSED : CurrentDoorState.OPENED;
         }
     }
 
