@@ -1,6 +1,6 @@
 "use strict";
 
-const { Gpio } = require("onoff");
+const { Gpio, gpioDirections } = require("./gpioPort");
 const { promisify } = require('util');
 
 class LedOutput {
@@ -8,20 +8,11 @@ class LedOutput {
         if (!Array.isArray(ledGpio) || ledGpio.length !== 3) {
             throw new Error(`Led GPIO configuration is wrong. An array containing 3 strings is required! (${ledGpio})`);
         }
+
         log(`Used GPIO pins for led output are: 'right: ${ledGpio[0]}' - 'failed: ${ledGpio[1]}' - 'left: ${ledGpio[2]}'`);
-        this.leftDoorLED = new Gpio(ledGpio[0], 'out');
-        this.failedLED = new Gpio(ledGpio[1], 'out');
-        this.rightDoorLED = new Gpio(ledGpio[2], 'out');
-
-        this.leftDoorLED.write(Gpio.LOW, () => {});
-        this.failedLED.write(Gpio.LOW, () => {});
-        this.rightDoorLED.write(Gpio.LOW, () => {});
-    }
-
-    stop() {
-        this.leftDoorLED.unexport();
-        this.failedLED.unexport();
-        this.rightDoorLED.unexport();
+        this.leftDoorLED = new Gpio(ledGpio[0], gpioDirections.low);
+        this.failedLED = new Gpio(ledGpio[1], gpioDirections.low);
+        this.rightDoorLED = new Gpio(ledGpio[2], gpioDirections.low);
     }
 
     async activateLeftLED() {
@@ -40,13 +31,9 @@ class LedOutput {
     }
 
     async _activateLED(led, duration) {
-        await this.writeLedState(led, Gpio.HIGH);
+        await led.writeAsync(Gpio.HIGH);
         await promisify(setTimeout)(duration);
-        await this.writeLedState(led, Gpio.LOW);
-    }
-
-    writeLedState(led, state) {
-        return new Promise(resolve => led.write(state, resolve));
+        await led.writeAsync(Gpio.LOW);
     }
 }
 

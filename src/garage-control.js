@@ -3,7 +3,7 @@
 const _ = require("lodash");
 const { Keypad } = require('./keypad');
 const { CombinationLock } = require('./combination-lock');
-const { DoorControl } = require("./door-control");
+const { DoorControl, LEFT_DOOR, RIGHT_DOOR } = require("./door-control");
 const { LedOutput } = require("./led-output");
 const { Buzzer } = require("./buzzer");
 
@@ -71,22 +71,17 @@ class GarageControl {
 
     stop() {
         this.keypad.stop();
-        this.lock.stop();
-        this.ledOutput.stop();
     }
 
-    openLeftDoor() {
-        this.log("unlocked left door");
+    openCloseDoor(door, callback) {
+        this.log(`unlocked ${door} door`);
+        if (door === LEFT_DOOR) {
+            this.ledOutput.activateLeftLED();
+        } else {
+            this.ledOutput.activateRightLED();
+        }
         this.buzzer.playSuccess();
-        this.ledOutput.activateLeftLED();
-        this.doorControl.openLeftDoor();
-    }
-
-    openRightDoor() {
-        this.log("unlocked right door");
-        this.buzzer.playSuccess();
-        this.ledOutput.activateRightLED();
-        this.doorControl.openRightDoor();
+        this.doorControl.openCloseDoor(door, callback);
     }
 }
 

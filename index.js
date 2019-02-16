@@ -1,91 +1,43 @@
 "use strict";
 
-const _ = require("lodash");
-const { GarageControl } = require('./src/garage-control');
-
-const LEFT_DOOR = "left";
-const RIGHT_DOOR = "right";
+const { LEFT_DOOR, RIGHT_DOOR } = require("./src/door-control");
+const initHomebridgeGarageDoorOpener = require("./src/homebridge/homebridgeGarageDoorOpener");
 
 module.exports = function (homebridge) {
-    const { AccessoryInformation, GarageDoorOpener } = homebridge.hap.Service;
-    const Characteristic = homebridge.hap.Characteristic;
-    const { TargetDoorState, CurrentDoorState } = Characteristic;
+    const Service = homebridge.hap.Service,
+    const Characteristic = homebridge.hap.Characteristic,
+    const uuid = homebridge.hap.uuid,
 
-    class GarageControlHomebridge {
+    const HomebridgeGarageDoorOpener = initHomebridgeGarageDoorOpener(homebridge);
+
+    class GarageControlHomebridge extends homebridge.hap.Accessory {
         constructor(log, config) {
+            const name = config.name;
+            const id = uuid.generate(`garagedoor.${config.id || name}`);
+            super(name, id);
+
+            this.name = name;
             this.log = log;
-            this.name = config.name || "garage control accessory";
-            this[LEFT_DOOR] = {
-                currentDoorState: CurrentDoorState.CLOSED,
-                targetDoorState: TargetDoorState.CLOSED,
-                service: this.createDoorOpenerService(LEFT_DOOR),
-            };
-            this[RIGHT_DOOR] = {
-                currentDoorState: CurrentDoorState.CLOSED,
-                targetDoorState: TargetDoorState.CLOSED,
-                service: this.createDoorOpenerService(RIGHT_DOOR),
-            };
 
             // garage control
             this.garageControl = new GarageControl({ ...config, log: this.log });
             this.garageControl.start();
 
+            // door services
+            this.leftDoorService = new HomebridgeGarageDoorOpener(LEFT_DOOR, this.garageControl, this.getDoorName(door), this.log, config);
+            this.rightDoorService = new HomebridgeGarageDoorOpener(RIGHT_DOOR, this.garageControl, this.getDoorName(door), this.log, config);
+
             // information service
-            this.informationService = new AccessoryInformation();
-            this.informationService
+            this.getService(Service.AccessoryInformation)
                 .setCharacteristic(Characteristic.Manufacturer, "stixx200")
                 .setCharacteristic(Characteristic.Model, "RPi Garage Control")
                 .setCharacteristic(Characteristic.SerialNumber, "0");
 
-            // if application gets closed, unregister GPIOs
-            process.on("SIGINT", () => this.garageControl.stop());
-        }
-
-        identify(callback) {
-            this.log("Identify requested!");
-            callback(null);
+            this.operationFinished = this.operationFinished.bind(this);
         }
 
         getServices() {
-            return [this.informationService, this[LEFT_DOOR].service, this[RIGHT_DOOR].service];
-        }
-
-        createDoorOpenerService(door) {
-            const serviceName = this.getDoorName(door);
-            const service = new GarageDoorOpener(serviceName, `${door}_garage_door`);
-            service.setCharacteristic(TargetDoorState, TargetDoorState.CLOSED);
-            service.setCharacteristic(CurrentDoorState, CurrentDoorState.CLOSED);
-            service.getCharacteristic(TargetDoorState)
-                .on("get", (callback) => { callback(null, this[door].targetDoorState) })
-                .on("set", (value, callback) => {
-                    this.setTargetDoorState(door, value);
-                    callback();
-                });
-            service.getCharacteristic(Characteristic.Name)
-                .on("get", (callback) => { callback(null, serviceName)})
-            return service;
-        }
-
-        setTargetDoorState(door, targetDoorState) {
-            this.log(`Set targetDoorState for door ${door} to '${targetDoorState}'`);
-            this[door].targetDoorState = targetDoorState;
-            this.openCloseDoor(door);
-        }
-
-        setCurrentDoorState(door, currentDoorState) {
-            this.log(`Set currentDoorState for door ${door} to '${currentDoorState}'`);
-            this[door].currentDoorState = currentDoorState;
-            this[door].service.setCharacteristic(CurrentDoorState, currentDoorState);
-        }
-
-        openCloseDoor(door) {
-            if (door === LEFT_DOOR) {
-                this.garageControl.openLeftDoor();
-            } else if (door === RIGHT_DOOR) {
-                this.garageControl.openRightDoor();
-            }
-            // because we have no response when the door is closed/opened, wait 1 second and then assume the door has been closed/opened.
-            setTimeout(() => this.setCurrentDoorState(this[door].targetDoorState), 1000);
+            return [...this.services, this.leftDoorService, this.rightDoorService];
         }
 
         getDoorName(door) {

@@ -1,6 +1,6 @@
 "use strict";
 
-const { Gpio } = require("onoff");
+const { Gpio, gpioDirections, gpioEdges } = require("./gpioPort");
 const { EventEmitter } = require("events");
 const _ = require("lodash");
 
@@ -17,8 +17,8 @@ class Keypad extends EventEmitter {
 
         this.keys = keys;
         this.allKeys = _.flatten(this.keys);
-        this.rows = rows.map((pin) => new Gpio(pin, 'out'));
-        this.cols = cols.map((pin) => new Gpio(pin, 'in', 'both'));
+        this.rows = rows.map((pin) => new Gpio(pin, gpioDirections.out));
+        this.cols = cols.map((pin) => new Gpio(pin, gpioDirections.in, gpioEdges.both));
         this.currentlyPressedKeys = [];
 
         log(`Using keypad:\n #### ${this.keys.join("\n #### ")}\n`);
@@ -46,11 +46,6 @@ class Keypad extends EventEmitter {
     stop() {
         clearInterval(this._intervalHandle);
         this._intervalHandle = null;
-
-        this.rows.forEach((rowPin) => { rowPin.unexport() });
-        this.rows = [];
-        this.cols.forEach((colPin) => { colPin.unexport() });
-        this.cols = [];
     }
 
     checkRows() {
