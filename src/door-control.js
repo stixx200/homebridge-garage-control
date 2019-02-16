@@ -1,9 +1,9 @@
-"use strict";
+'use strict';
 
-const { EventEmitter } = require("events");
-const { promisifiy } = require("util");
-const { Gpio, gpioDirections } = require("./gpioPort");
-const { DoorSensorPort } = require("./doorSensorPort");
+const { EventEmitter } = require('events');
+const { promisifiy } = require('util');
+const { Gpio, gpioDirections } = require('./gpioPort');
+const { DoorSensorPort } = require('./doorSensorPort');
 
 const wait = promisifiy(setTimeout);
 
@@ -31,7 +31,11 @@ class DoorControl extends EventEmitter {
         this.log = log;
 
         this.log(`Used GPIO pin for door control ${this.id} is: '${config.doorGpio}'`);
-        this.log(`Used GPIO pins for door sensor (isNcSensor: ${config.isNcSensor}): '[opened: ${config.openedSensorGpio}, closed: ${config.closedSensorGpio}]'`);
+        this.log(
+            `Used GPIO pins for door sensor (isNcSensor: ${config.isNcSensor}): '[opened: ${
+                config.openedSensorGpio
+            }, closed: ${config.closedSensorGpio}]'`,
+        );
 
         this.maxTimeToWaitForDoorChanged = config.maxTimeToWaitForDoorChanged || 30000; // 30s default
         this.doorOutDuration = config.doorOutDuration || 300;
@@ -40,9 +44,8 @@ class DoorControl extends EventEmitter {
         if (config.openedSensorGpio) {
             this.openedSensor = new DoorSensorPort(config.openedSensorGpio, config.isNcSensor);
             this.closedSensor = new DoorSensorPort(config.closedSensorGpio, config.isNcSensor);
-            this.openedSensor.on("update", this.onSensorPortChanged);
+            this.openedSensor.on('update', this.onSensorPortChanged);
         }
-
     }
 
     async openCloseDoor() {
@@ -56,13 +59,13 @@ class DoorControl extends EventEmitter {
             // wait for correct sensor to be closed, but max. maxTimeToWaitForDoorChanged
             await Promise.race([
                 wait(this.maxTimeToWaitForDoorChanged),
-                new Promise((resolve) => {
+                new Promise(resolve => {
                     if (oldClosedState) {
-                        this.openedSensor.once("update", resolve)
+                        this.openedSensor.once('update', resolve);
                     } else {
-                        this.closedSensor.once("update", resolve)
+                        this.closedSensor.once('update', resolve);
                     }
-                })
+                }),
             ]);
         } else {
             // no sensors available. Just call callback after maxTimeToWaitForDoorChanged
@@ -71,7 +74,7 @@ class DoorControl extends EventEmitter {
     }
 
     onSensorPortChanged() {
-        this.emit("update", this.isClosed());
+        this.emit('update', this.isClosed());
     }
 
     isDoorClosed() {
@@ -80,7 +83,11 @@ class DoorControl extends EventEmitter {
         }
 
         if (this.openedSensor && this.openedSensor.isClosed && this.closedSensor.isClosed) {
-            this.log(`The sensors of ${this.id} door have detected incorrect state. Both sensors say they are closed. Assume door is opened.`);
+            this.log(
+                `The sensors of ${
+                    this.id
+                } door have detected incorrect state. Both sensors say they are closed. Assume door is opened.`,
+            );
         }
 
         // if no sensor is available, the door is everytime closed

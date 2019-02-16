@@ -1,6 +1,5 @@
-
-const { Gpio: OnOffGpio } = require("onoff");
-const { promisify } = require("util");
+const { Gpio: OnOffGpio } = require('onoff');
+const { promisify } = require('util');
 
 const gpioReadAsync = promisify(Gpio.prototype.read);
 const gpioWriteAsync = promisify(Gpio.prototype.write);
@@ -24,31 +23,30 @@ class Gpio extends OnOffGpio {
     constructor(gpio, direction, edge) {
         super(gpio, direction, edge);
 
-		process.on('SIGINT', () => {
-			this.unexport();
-		});
+        process.on('SIGINT', () => {
+            this.unexport();
+        });
     }
 
-	getState(retryCount) {
-		retryCount = retryCount != null ? retryCount : 3;
-		let val = 0;
-		for (let i = 0; i < retryCount; i++) {
-			val = this.readSync();
-			if (val == Gpio.HIGH) {
-				break;
-			}
-		}
-		return val;
-	};
+    getState(retryCount) {
+        retryCount = retryCount != null ? retryCount : 3;
+        let val = 0;
+        for (let i = 0; i < retryCount; i++) {
+            val = this.readSync();
+            if (val == Gpio.HIGH) {
+                break;
+            }
+        }
+        return val;
+    }
 
-
-	readAsync() {
+    readAsync() {
         return gpioReadAsync.call(this);
-	}
+    }
 
-	writeAsync(state) {
-		return gpioWriteAsync.call(this, state);
-	}
+    writeAsync(state) {
+        return gpioWriteAsync.call(this, state);
+    }
 }
 Gpio.HIGH = OnOffGpio.HIGH;
 Gpio.LOW = OnOffGpio.LOW;

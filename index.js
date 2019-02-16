@@ -3,9 +3,9 @@
 const initHomebridgeGarageDoorOpener = require("./src/homebridge/homebridgeGarageDoorOpener");
 
 module.exports = function (homebridge) {
-    const Service = homebridge.hap.Service,
-    const Characteristic = homebridge.hap.Characteristic,
-    const uuid = homebridge.hap.uuid,
+    const Service = homebridge.hap.Service;
+    const Characteristic = homebridge.hap.Characteristic;
+    const uuid = homebridge.hap.uuid;
 
     const HomebridgeGarageDoorOpener = initHomebridgeGarageDoorOpener(homebridge);
 
@@ -22,10 +22,8 @@ module.exports = function (homebridge) {
             this.garageControl = new GarageControl({ ...config, log: this.log });
             this.garageControl.start();
 
-            this.doorServices = _.map(this.garageControl.doors, (door) => {
-                const doorName = door.name || door.id;
-                return new HomebridgeGarageDoorOpener(door.id, this.garageControl, doorName, this.log, config);
-            });
+            this.doorServices = _.map(this.garageControl.doors,
+                doorHandler => new HomebridgeGarageDoorOpener(doorHandler, this.log, config));
 
             // information service
             this.getService(Service.AccessoryInformation)

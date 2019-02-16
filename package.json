@@ -19,7 +19,8 @@
     "rxjs": "^6.3.3"
   },
   "devDependencies": {
-    "jest": "^23.6.0"
+    "jest": "^24.1.0",
+    "prettier": "^1.16.4"
   },
   "engines": {
     "node": ">=8.11.1",

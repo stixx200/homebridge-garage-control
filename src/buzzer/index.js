@@ -1,6 +1,6 @@
 const pigpio = require('pigpio');
 const { promisify } = require('util');
-const freq = require("./frequencies");
+const freq = require('./frequencies');
 
 const Gpio = pigpio.Gpio;
 const delay = promisify(setTimeout);
@@ -16,7 +16,11 @@ class Buzzer {
         try {
             this.buzzer = new Gpio(+gpio, { mode: Gpio.OUTPUT });
         } catch (error) {
-            log(`Can't create PWM output for buzzer. Try to run the program as root. Details: ${error.stack}`);
+            log(
+                `Can't create PWM output for buzzer. Try to run the program as root. Details: ${
+                    error.stack
+                }`,
+            );
             this.buzzer = { hardwarePwmWrite: () => {} }; // fake implementation
         }
         this.enabled = true;
@@ -145,15 +149,17 @@ class Buzzer {
         await this.beep(freq.a, 1000, job);
     }
 
-    async beep(freq, duration, job)
-    {
-        if (!this.enabled) { // if beep is not enabled, ignore it.
+    async beep(freq, duration, job) {
+        if (!this.enabled) {
+            // if beep is not enabled, ignore it.
             return;
         }
-        if (job && this.currentJob !== job) { // ignore beeps if next job is executing.
+        if (job && this.currentJob !== job) {
+            // ignore beeps if next job is executing.
             return;
         }
-        if (!job) { // mute further jobs if beep is called directly without playing a song.
+        if (!job) {
+            // mute further jobs if beep is called directly without playing a song.
             this.currentJob++;
         }
 

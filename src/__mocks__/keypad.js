@@ -1,6 +1,6 @@
-"use strict";
+'use strict';
 
-const { EventEmitter } = require("events");
+const { EventEmitter } = require('events');
 
 module.exports = {
     Keypad: EventEmitter,

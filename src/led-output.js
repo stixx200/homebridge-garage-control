@@ -1,6 +1,6 @@
-"use strict";
+'use strict';
 
-const { Gpio, gpioDirections } = require("./gpioPort");
+const { Gpio, gpioDirections } = require('./gpioPort');
 const { promisify } = require('util');
 
 const wait = promisify(setTimeout);
