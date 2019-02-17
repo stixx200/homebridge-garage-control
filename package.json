@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "style": "prettier --write **/*.js",
+    "deploy": "node ./scripts/deploy"
   },
   "keywords": [
     "homebridge-plugin",

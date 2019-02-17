@@ -1,8 +1,8 @@
-"use strict";
+'use strict';
 
-const initHomebridgeGarageDoorOpener = require("./src/homebridge/homebridgeGarageDoorOpener");
+const initHomebridgeGarageDoorOpener = require('./src/homebridge/homebridgeGarageDoorOpener');
 
-module.exports = function (homebridge) {
+module.exports = function(homebridge) {
     const Service = homebridge.hap.Service;
     const Characteristic = homebridge.hap.Characteristic;
     const uuid = homebridge.hap.uuid;
@@ -22,14 +22,16 @@ module.exports = function (homebridge) {
             this.garageControl = new GarageControl({ ...config, log: this.log });
             this.garageControl.start();
 
-            this.doorServices = _.map(this.garageControl.doors,
-                doorHandler => new HomebridgeGarageDoorOpener(doorHandler, this.log, config));
+            this.doorServices = _.map(
+                this.garageControl.doors,
+                doorHandler => new HomebridgeGarageDoorOpener(doorHandler, this.log, config),
+            );
 
             // information service
             this.getService(Service.AccessoryInformation)
-                .setCharacteristic(Characteristic.Manufacturer, "stixx200")
-                .setCharacteristic(Characteristic.Model, "RPi Garage Control")
-                .setCharacteristic(Characteristic.SerialNumber, "0");
+                .setCharacteristic(Characteristic.Manufacturer, 'stixx200')
+                .setCharacteristic(Characteristic.Model, 'RPi Garage Control')
+                .setCharacteristic(Characteristic.SerialNumber, '0');
 
             this.operationFinished = this.operationFinished.bind(this);
         }
@@ -39,5 +41,9 @@ module.exports = function (homebridge) {
         }
     }
 
-    homebridge.registerAccessory("homebridge-garage-control", "GarageControl", GarageControlHomebridge);
+    homebridge.registerAccessory(
+        'homebridge-garage-control',
+        'GarageControl',
+        GarageControlHomebridge,
+    );
 };
